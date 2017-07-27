@@ -1,117 +1,90 @@
+let game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
-let myGamePiece;
-let myObstacles = [];
-let myScore;
+let player, cursors, enemies;
 
-function startGame() {
-    myGamePiece = new component(30, 30, "red", 10, 120);
-    myGamePiece.gravity = 0.05;
-    myScore = new component("30px", "Consolas", "black", 280, 40, "text");
-    myGameArea.start();
+function preload() {
+
+    game.load.image('picard', 'img/picard.png');
+    game.load.image('cube', 'img/cube.png');
+    game.load.audio('theme', 'sound/theme.mp3');
+
+    game.load.audio('engage', 'sound/engage.mp3');
+    game.load.audio('getoff', 'sound/getoff.mp3');
+    game.load.audio('notgood', 'sound/notgoodenough.mp3');
+
+    game.scale.scaleMode = Phaser.ScaleManager.RESIZE;
+    game.scale.pageAlignHorizontally = true;
+    game.scale.pageAlignVertically = true;
+
 }
 
-let myGameArea = {
-    canvas : document.createElement("canvas"),
-    start : function() {
-        this.canvas.width = $(window).width();
-        this.canvas.height = $(window).height()-$(window).height()/3;
-        this.context = this.canvas.getContext("2d");
-        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-        this.frameNo = 0;
-        this.interval = setInterval(updateGameArea, 20);
-    },
-    clear : function() {
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-};
+function create() {
 
-let component = function(width, height, color, x, y, type) {
-    this.type = type;
-    this.score = 0;
-    this.width = width;
-    this.height = height;
-    this.speedX = 0;
-    this.speedY = 0;
-    this.x = x;
-    this.y = y;
-    this.gravity = 0;
-    this.gravitySpeed = 0;
-    this.update = function() {
-        ctx = myGameArea.context;
-        if (this.type === "text") {
-            ctx.font = this.width + " " + this.height;
-            ctx.fillStyle = color;
-            ctx.fillText(this.text, this.x, this.y);
-        } else {
-            ctx.fillStyle = color;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
-    };
-    this.newPos = function() {
-        this.gravitySpeed += this.gravity;
-        this.x += this.speedX;
-        this.y += this.speedY + this.gravitySpeed;
-        this.hitBottom();
-    };
-    this.hitBottom = function() {
-        let rockbottom = myGameArea.canvas.height - this.height;
-        if (this.y > rockbottom) {
-            this.y = rockbottom;
-            this.gravitySpeed = 0;
-        }
-    };
-    this.crashWith = function(otherobj) {
-        let myleft = this.x;
-        let myright = this.x + (this.width);
-        let mytop = this.y;
-        let mybottom = this.y + (this.height);
-        let otherleft = otherobj.x;
-        let otherright = otherobj.x + (otherobj.width);
-        let othertop = otherobj.y;
-        let otherbottom = otherobj.y + (otherobj.height);
-        let crash = true;
-        if ((mybottom < othertop) || (mytop > otherbottom) || (myright < otherleft) || (myleft > otherright)) {
-            crash = false;
-        }
-        return crash;
-    }
-    return this;
-};
+    player = game.add.sprite(20, 20, 'picard');
 
-function updateGameArea() {
-    let x, height, gap, minHeight, maxHeight, minGap, maxGap;
-    for (i = 0; i < myObstacles.length; i += 1) {
-        if (myGamePiece.crashWith(myObstacles[i])) {
-            return;
-        }
-    }
-    myGameArea.clear();
-    myGameArea.frameNo += 1;
-    if (myGameArea.frameNo === 1 || everyinterval(150)) {
-        x = myGameArea.canvas.width;
-        minHeight = 20;
-        maxHeight = 200;
-        height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
-        minGap = 50;
-        maxGap = 200;
-        gap = Math.floor(Math.random()*(maxGap-minGap+1)+minGap);
-        myObstacles.push(new component(10, height, "green", x, 0));
-        myObstacles.push(new component(10, x - height - gap, "green", x, height + gap));
-    }
-    for (i = 0; i < myObstacles.length; i += 1) {
-        myObstacles[i].x += -1;
-        myObstacles[i].update();
-    }
-    myScore.text="SCORE: " + myGameArea.frameNo;
-    myScore.update();
-    myGamePiece.newPos();
-    myGamePiece.update();
+    game.physics.arcade.enable(player);
+
+    player.body.bounce.y = 0.5;
+    player.body.gravity.y = 1500;
+    player.body.collideWorldBounds = true;
+
+    soundBytes = [
+        game.add.audio('engage'),
+        game.add.audio('getoff'),
+        game.add.audio('notgood')
+    ];
+
+    cursors = game.input.keyboard.createCursorKeys();
+
+    space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+    space.onDown.add(jump, this);
+
+    music = game.add.audio('theme');
+    music.onDecoded.add(start, this);
+
+    game.time.events.loop(Phaser.Timer.SECOND*10, picardSaySomething, this);
+    game.time.events.loop(Phaser.Timer.SECOND*5, addCube, this);
+
+    enemies = [];
+
 }
 
-function everyinterval(n) {
-    return ((myGameArea.frameNo / n) % 1 === 0);
+function addCube() {
+    let cube = game.add.sprite(800, game.world.randomY, 'cube');
+
+    game.physics.enable(cube, Phaser.Physics.ARCADE);
+
+    cube.body.bounce.y = 0.9;
+    cube.body.collideWorldBounds = true;
+
+    enemies.push(cube);
 }
 
-function accelerate(n) {
-    myGamePiece.gravity = n;
+
+function start() {
+
+    music.fadeIn(500);
+
+}
+
+function update() {
+
+    for(let i = 0; i < enemies.length; i++){
+        game.physics.arcade.moveToPointer(enemies[i], 60, player, 500);
+    }
+
+}
+
+function picardSaySomething() {
+    soundBytes[getRandomInt(0, soundBytes.length-1)].play();
+}
+
+function jump() {
+    player.body.velocity.y = -500;
+}
+
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
 }

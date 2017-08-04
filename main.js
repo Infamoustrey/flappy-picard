@@ -25,7 +25,7 @@ function create() {
     game.physics.arcade.enable(player);
 
     player.body.bounce.y = 0.5;
-    player.body.gravity.y = 1500;
+    //player.body.gravity.y = 1500;
     player.body.collideWorldBounds = true;
 
     soundBytes = [
@@ -37,7 +37,8 @@ function create() {
     cursors = game.input.keyboard.createCursorKeys();
 
     space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-    space.onDown.add(jump, this);
+
+    space.onDown.add(fire, this);
 
     music = game.add.audio('theme');
     music.onDecoded.add(start, this);
@@ -45,33 +46,36 @@ function create() {
     game.time.events.loop(Phaser.Timer.SECOND*10, picardSaySomething, this);
     game.time.events.loop(Phaser.Timer.SECOND*5, addCube, this);
 
+    player.body.onCollide = new Phaser.Signal();
+    player.body.onCollide.add(picardSaySomething, this);
+
     enemies = [];
 
 }
 
-function addCube() {
-    let cube = game.add.sprite(800, game.world.randomY, 'cube');
-
-    game.physics.enable(cube, Phaser.Physics.ARCADE);
-
-    cube.body.bounce.y = 0.9;
-    cube.body.collideWorldBounds = true;
-
-    enemies.push(cube);
-}
-
-
 function start() {
-
     music.fadeIn(500);
-
 }
 
 function update() {
 
+
     for(let i = 0; i < enemies.length; i++){
-        game.physics.arcade.moveToPointer(enemies[i], 60, player, 500);
+        game.physics.arcade.collide(enemies[i], player);
+
+        if(player.x > enemies[i].x){enemies[i].x++;}
+        if(player.x < enemies[i].x){enemies[i].x--;}
+        if(player.y > enemies[i].y){enemies[i].y++;}
+        if(player.y < enemies[i].y){enemies[i].y--;}
     }
+
+    if (game.input.keyboard.isDown(Phaser.Keyboard.LEFT)) { player.x -= 8; }
+    else if (game.input.keyboard.isDown(Phaser.Keyboard.RIGHT))
+    {  player.x += 8; }
+
+    if (game.input.keyboard.isDown(Phaser.Keyboard.UP)) { player.y -= 8; }
+    else if (game.input.keyboard.isDown(Phaser.Keyboard.DOWN))
+    {  player.y += 8; }
 
 }
 
@@ -79,12 +83,23 @@ function picardSaySomething() {
     soundBytes[getRandomInt(0, soundBytes.length-1)].play();
 }
 
-function jump() {
-    player.body.velocity.y = -500;
+function fire() {
+
+
+
 }
 
 function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+}
+
+function addCube() {
+    let cube = game.add.sprite(800, game.world.randomY, 'cube');
+
+    game.physics.enable(cube, Phaser.Physics.ARCADE);
+    cube.body.collideWorldBounds = true;
+
+    enemies.push(cube);
 }

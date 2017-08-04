@@ -1,10 +1,11 @@
 let game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
-let player, cursors, enemies;
+let player, cursors, enemies, bulletTime, bullets;
 
 function preload() {
 
     game.load.image('picard', 'img/picard.png');
+    game.load.image('bullet', 'img/bullet.png');
     game.load.image('cube', 'img/cube.png');
     game.load.audio('theme', 'sound/theme.mp3');
 
@@ -49,7 +50,10 @@ function create() {
     player.body.onCollide = new Phaser.Signal();
     player.body.onCollide.add(picardSaySomething, this);
 
+    bulletTime = 0;
+
     enemies = [];
+    bullets = [];
 
 }
 
@@ -69,12 +73,12 @@ function update() {
         if(player.y < enemies[i].y){enemies[i].y--;}
     }
 
-    if (game.input.keyboard.isDown(Phaser.Keyboard.LEFT)) { player.x -= 8; }
-    else if (game.input.keyboard.isDown(Phaser.Keyboard.RIGHT))
+    if (game.input.keyboard.isDown(Phaser.Keyboard.A)) { player.x -= 8; }
+    else if (game.input.keyboard.isDown(Phaser.Keyboard.D))
     {  player.x += 8; }
 
-    if (game.input.keyboard.isDown(Phaser.Keyboard.UP)) { player.y -= 8; }
-    else if (game.input.keyboard.isDown(Phaser.Keyboard.DOWN))
+    if (game.input.keyboard.isDown(Phaser.Keyboard.W)) { player.y -= 8; }
+    else if (game.input.keyboard.isDown(Phaser.Keyboard.S))
     {  player.y += 8; }
 
 }
@@ -85,7 +89,22 @@ function picardSaySomething() {
 
 function fire() {
 
+    if(bulletTime < game.time.now ){
 
+        bulletTime = game.time.now + 200;
+
+        let bullet = game.add.sprite(player.x, player.y, 'bullet');
+
+        game.physics.enable(bullet, Phaser.Physics.ARCADE);
+        bullet.body.collideWorldBounds = true;
+
+        bullet.reset(player.x, player.y + 8);
+
+        game.physics.arcade.moveToPointer(bullet, 1000, game.input.activePointer, 500);
+
+        bullets.push(bullet);
+
+    }
 
 }
 
